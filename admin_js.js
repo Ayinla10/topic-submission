@@ -2,10 +2,10 @@
 // CONFIGURATION
 // ============================================
 // REPLACE THIS WITH YOUR ACTUAL GOOGLE APPS SCRIPT WEB APP URL
-const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweMCHLI43XSw4QBrk5x0R38fnxvgTFZLjXIrBJ3xQoDz_47OS7-AvG_uY_ph5lkMMumw/exec';
 
 // CHANGE THIS TO YOUR DESIRED ADMIN PASSWORD
-const ADMIN_PASSWORD = 'admin123';
+const ADMIN_PASSWORD = 'admin@1012';
 
 // ============================================
 // GLOBAL DATA STORAGE
