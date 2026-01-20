@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Topic Submissions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .login-container button:hover {
+            background: #5568d3;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls select,
+        .controls input {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background: #5568d3;
+        }
+
+        .controls button.secondary {
+            background: #27ae60;
+        }
+
+        .controls button.secondary:hover {
+            background: #229954;
+        }
+
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .approved-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .pending-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .controls select,
+            .controls input,
+            .controls button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginContainer" class="login-container">
+            <h1>Admin Login</h1>
+            <input type="password" id="passwordInput" placeholder="Enter admin password">
+            <button onclick="login()">Login</button>
+            <div id="loginError" class="error-msg"></div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="dashboard">
+            <div class="header">
+                <h1>Project Topic Submissions Dashboard</h1>
+                <p>View and export all student submissions</p>
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>Total Submissions</h3>
+                        <div class="number" id="totalCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Approved Topics</h3>
+                        <div class="number" id="approvedCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Approval</h3>
+                        <div class="number" id="pendingCount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <select id="filterSelect" onchange="filterData()">
+                    <option value="all">All Submissions</option>
+                    <option value="approved">Approved Only</option>
+                    <option value="pending">Pending Only</option>
+                </select>
+
+                <input type="text" id="searchInput" placeholder="Search by name or roll number..." oninput="filterData()">
+
+                <button onclick="refreshData()">Refresh Data</button>
+                <button class="secondary" onclick="exportToCSV()">Export as CSV</button>
+                <button class="secondary" onclick="exportToExcel()">Export as Excel</button>
+            </div>
+
+            <div class="table-container">
+                <div id="loading" class="loading">Loading data...</div>
+                <div id="noData" class="no-data" style="display: none;">No submissions found</div>
+                <table id="dataTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Full Name</th>
+                            <th>Roll Number</th>
+                            <th>Topic 1</th>
+                            <th>Topic 2</th>
+                            <th>Topic 3</th>
+                            <th>Topic 4</th>
+                            <th>Approved Topic</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
