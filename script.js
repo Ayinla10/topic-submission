@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ============================================
 // REPLACE THIS WITH YOUR ACTUAL GOOGLE APPS SCRIPT WEB APP URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweMCHLI43XSw4QBrk5x0R38fnxvgTFZLjXIrBJ3xQoDz_47OS7-AvG_uY_ph5lkMMumw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA5QmONMDWcAjG97KjLqREHo72CL6qXTsGEwS0DiHzbeaR7MyQfWJEcW7O7TkaCGMuLQ/exec';
 
 // ============================================
 // DOM ELEMENTS
