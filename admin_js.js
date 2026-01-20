@@ -114,8 +114,8 @@ function filterData() {
         // Filter by search term (name or roll number)
         let searchMatch = true;
         if (searchValue) {
-            const name = row[1].toLowerCase();
-            const rollNumber = row[2].toLowerCase();
+            const name = (row[1] || '').toLowerCase();
+            const rollNumber = (row[2] || '').toLowerCase();
             searchMatch = name.includes(searchValue) || rollNumber.includes(searchValue);
         }
 
@@ -148,40 +148,12 @@ function renderTable() {
     filteredData.forEach(row => {
         const tr = document.createElement('tr');
         
-        // Timestamp
-        const tdTimestamp = document.createElement('td');
-        tdTimestamp.textContent = row[0];
-        tr.appendChild(tdTimestamp);
-
-        // Full Name
-        const tdName = document.createElement('td');
-        tdName.textContent = row[1];
-        tr.appendChild(tdName);
-
-        // Roll Number
-        const tdRoll = document.createElement('td');
-        tdRoll.textContent = row[2];
-        tr.appendChild(tdRoll);
-
-        // Topics 1-4
-        for (let i = 3; i <= 6; i++) {
+        // Create cells for all 8 columns
+        for (let i = 0; i < 8; i++) {
             const td = document.createElement('td');
             td.textContent = row[i] || '-';
             tr.appendChild(td);
         }
-
-        // Approved Topic
-        const tdApproved = document.createElement('td');
-        tdApproved.textContent = row[7];
-        tr.appendChild(tdApproved);
-
-        // Status Badge
-        const tdStatus = document.createElement('td');
-        const isApproved = row[7] !== 'None approved yet';
-        tdStatus.innerHTML = isApproved 
-            ? '<span class="approved-badge">Approved</span>' 
-            : '<span class="pending-badge">Pending</span>';
-        tr.appendChild(tdStatus);
 
         tbody.appendChild(tr);
     });
@@ -196,14 +168,12 @@ function exportToCSV() {
         return;
     }
 
-    const headers = ['Timestamp', 'Full Name', 'Roll Number', 'Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Approved Topic', 'Status'];
+    const headers = ['Timestamp', 'Full Name', 'Roll Number', 'Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Approved Topic'];
     
     let csv = headers.join(',') + '\n';
 
     filteredData.forEach(row => {
-        const status = row[7] !== 'None approved yet' ? 'Approved' : 'Pending';
-        const rowData = [...row, status].map(cell => {
-            // Escape quotes and wrap in quotes if contains comma or quote
+        const rowData = row.map(cell => {
             const cellStr = String(cell || '');
             if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
                 return `"${cellStr.replace(/"/g, '""')}"`;
@@ -217,7 +187,7 @@ function exportToCSV() {
 }
 
 // ============================================
-// EXCEL EXPORT (CSV format compatible with Excel)
+// EXCEL EXPORT
 // ============================================
 function exportToExcel() {
     if (filteredData.length === 0) {
@@ -225,15 +195,13 @@ function exportToExcel() {
         return;
     }
 
-    // Create CSV in Excel-compatible format
-    const headers = ['Timestamp', 'Full Name', 'Roll Number', 'Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Approved Topic', 'Status'];
+    const headers = ['Timestamp', 'Full Name', 'Roll Number', 'Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Approved Topic'];
     
     let csv = '\uFEFF'; // UTF-8 BOM for Excel
     csv += headers.join(',') + '\n';
 
     filteredData.forEach(row => {
-        const status = row[7] !== 'None approved yet' ? 'Approved' : 'Pending';
-        const rowData = [...row, status].map(cell => {
+        const rowData = row.map(cell => {
             const cellStr = String(cell || '');
             if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
                 return `"${cellStr.replace(/"/g, '""')}"`;
