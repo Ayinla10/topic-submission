@@ -4,17 +4,20 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA5QmONMDWcAjG97KjLqREHo72CL6qXTsGEwS0DiHzbeaR7MyQfWJEcW7O7TkaCGMuLQ/exec';
 
 // ============================================
-// SHOW/HIDE MESSAGES PROPERLY
+// SHOW/HIDE MESSAGES
 // ============================================
 function showMessage(text, type = 'info') {
     const messageDiv = document.getElementById('message');
     if (!messageDiv) return;
-    
+
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
     messageDiv.classList.remove('hidden');
-    
-    // Auto-hide success messages after 5s
+
+    // Scroll to show message
+    messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Auto-hide success messages after 5 seconds
     if (type === 'success') {
         setTimeout(() => messageDiv.classList.add('hidden'), 5000);
     }
@@ -29,30 +32,21 @@ function hideMessage() {
 // UPDATE APPROVED TOPIC DROPDOWN
 // ============================================
 function updateApprovedTopicDropdown() {
-    const topics = ['topic1','topic2','topic3','topic4']
-        .map(id => document.getElementById(id).value.trim())
-        .filter(t => t !== '');
-
+    const topics = ['topic1','topic2','topic3','topic4'].map(id => document.getElementById(id)?.value.trim()).filter(t => t);
     const dropdown = document.getElementById('approvedTopic');
     if (!dropdown) return;
 
-    const currentValue = dropdown.value;
+    const current = dropdown.value;
     dropdown.innerHTML = '';
 
-    // Default
-    dropdown.innerHTML = '<option value="">-- Select Approved Topic --</option>';
-    dropdown.innerHTML += '<option value="None approved yet">None approved yet</option>';
+    // Default options
+    dropdown.appendChild(new Option('-- Select Approved Topic --',''));
+    dropdown.appendChild(new Option('None approved yet','None approved yet'));
 
-    topics.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        dropdown.appendChild(opt);
-    });
+    // Add entered topics
+    topics.forEach(topic => dropdown.appendChild(new Option(topic, topic)));
 
-    if (currentValue && ['None approved yet', ...topics].includes(currentValue)) {
-        dropdown.value = currentValue;
-    }
+    if (current && ['None approved yet', ...topics].includes(current)) dropdown.value = current;
 }
 
 // ============================================
@@ -60,26 +54,27 @@ function updateApprovedTopicDropdown() {
 // ============================================
 function validateForm() {
     hideMessage();
+
     const fullName = document.getElementById('fullName').value.trim();
     const rollNumber = document.getElementById('rollNumber').value.trim();
     const topic1 = document.getElementById('topic1').value.trim();
     const approvedTopic = document.getElementById('approvedTopic').value;
     const confirmation = document.getElementById('confirmation').checked;
 
-    if (!fullName) return showMessage('Please enter your full name', 'error'), false;
-    if (!rollNumber) return showMessage('Please enter your roll number', 'error'), false;
-    if (!topic1) return showMessage('Enter at least one topic', 'error'), false;
-    if (!approvedTopic) return showMessage('Select approved topic', 'error'), false;
-    if (!confirmation) return showMessage('Confirm supervisor approval', 'error'), false;
+    if (!fullName) { showMessage('Please enter your full name','error'); document.getElementById('fullName').focus(); return false; }
+    if (!rollNumber) { showMessage('Please enter your roll number','error'); document.getElementById('rollNumber').focus(); return false; }
+    if (!topic1) { showMessage('Please enter at least one project topic','error'); document.getElementById('topic1').focus(); return false; }
+    if (!approvedTopic) { showMessage('Please select an approved topic','error'); document.getElementById('approvedTopic').focus(); return false; }
+    if (!confirmation) { showMessage('Please confirm that you have supervisor approval','error'); document.getElementById('confirmation').focus(); return false; }
 
     return true;
 }
 
 // ============================================
-// SUBMIT FORM (POST)
+// SUBMIT FORM USING POST
 // ============================================
 async function submitForm(event) {
-    if (event) event.preventDefault();
+    if (event) { event.preventDefault(); event.stopPropagation(); }
 
     if (!validateForm()) return false;
 
@@ -111,7 +106,7 @@ async function submitForm(event) {
         const result = await response.json();
 
         if (result.success) {
-            showMessage('✅ Submission successful!', 'success');
+            showMessage('✅ Submission successful! Your project topics have been recorded.', 'success');
             resetForm();
         } else {
             showMessage('❌ Submission failed: ' + result.message, 'error');
@@ -124,6 +119,8 @@ async function submitForm(event) {
         submitBtn.textContent = originalText;
         submitBtn.style.opacity = '1';
     }
+
+    return false;
 }
 
 // ============================================
@@ -138,25 +135,25 @@ function resetForm() {
 }
 
 // ============================================
-// EVENT LISTENERS
+// SETUP EVENT LISTENERS
 // ============================================
 function setupEventListeners() {
     ['topic1','topic2','topic3','topic4'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) input.addEventListener('input', updateApprovedTopicDropdown);
+        document.getElementById(id)?.addEventListener('input', updateApprovedTopicDropdown);
     });
 
-    const form = document.getElementById('studentForm');
-    const submitBtn = document.getElementById('submitBtn');
-    if (form) form.addEventListener('submit', submitForm);
-    if (submitBtn) submitBtn.addEventListener('click', submitForm);
+    document.getElementById('studentForm')?.addEventListener('submit', submitForm);
+    document.getElementById('submitBtn')?.addEventListener('click', submitForm);
+
+    ['fullName','rollNumber','topic1'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', hideMessage);
+    });
 }
 
 // ============================================
-// INIT
+// INITIALIZE ON PAGE LOAD
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Form ready');
     setupEventListeners();
     updateApprovedTopicDropdown();
     document.getElementById('fullName').focus();
