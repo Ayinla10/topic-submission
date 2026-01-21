@@ -1,7 +1,7 @@
 // ============================================
-// GOOGLE APPS SCRIPT URL
+// CONFIGURATION
 // ============================================
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA5QmONMDWcAjG97KjLqREHo72CL6qXTsGEwS0DiHzbeaR7MyQfWJEcW7O7TkaCGMuLQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNPgMslnEuZSii-Dv3xu5dbWGYij-jb9RRJNrO4SjRXw4IcNiK1W0W3rxEBzp_CRUaYw/exec';
 
 // ============================================
 // SHOW/HIDE MESSAGES
@@ -13,11 +13,8 @@ function showMessage(text, type = 'info') {
     messageDiv.textContent = text;
     messageDiv.className = `message ${type}`;
     messageDiv.classList.remove('hidden');
-
-    // Scroll to show message
     messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    // Auto-hide success messages after 5 seconds
     if (type === 'success') {
         setTimeout(() => messageDiv.classList.add('hidden'), 5000);
     }
@@ -32,21 +29,24 @@ function hideMessage() {
 // UPDATE APPROVED TOPIC DROPDOWN
 // ============================================
 function updateApprovedTopicDropdown() {
-    const topics = ['topic1','topic2','topic3','topic4'].map(id => document.getElementById(id)?.value.trim()).filter(t => t);
+    const topics = ['topic1', 'topic2', 'topic3', 'topic4']
+        .map(id => document.getElementById(id)?.value.trim())
+        .filter(t => t);
+    
     const dropdown = document.getElementById('approvedTopic');
     if (!dropdown) return;
 
     const current = dropdown.value;
     dropdown.innerHTML = '';
 
-    // Default options
-    dropdown.appendChild(new Option('-- Select Approved Topic --',''));
-    dropdown.appendChild(new Option('None approved yet','None approved yet'));
+    dropdown.appendChild(new Option('-- Select Approved Topic --', ''));
+    dropdown.appendChild(new Option('None approved yet', 'None approved yet'));
 
-    // Add entered topics
     topics.forEach(topic => dropdown.appendChild(new Option(topic, topic)));
 
-    if (current && ['None approved yet', ...topics].includes(current)) dropdown.value = current;
+    if (current && ['None approved yet', ...topics].includes(current)) {
+        dropdown.value = current;
+    }
 }
 
 // ============================================
@@ -61,20 +61,43 @@ function validateForm() {
     const approvedTopic = document.getElementById('approvedTopic').value;
     const confirmation = document.getElementById('confirmation').checked;
 
-    if (!fullName) { showMessage('Please enter your full name','error'); document.getElementById('fullName').focus(); return false; }
-    if (!rollNumber) { showMessage('Please enter your roll number','error'); document.getElementById('rollNumber').focus(); return false; }
-    if (!topic1) { showMessage('Please enter at least one project topic','error'); document.getElementById('topic1').focus(); return false; }
-    if (!approvedTopic) { showMessage('Please select an approved topic','error'); document.getElementById('approvedTopic').focus(); return false; }
-    if (!confirmation) { showMessage('Please confirm that you have supervisor approval','error'); document.getElementById('confirmation').focus(); return false; }
+    if (!fullName) {
+        showMessage('Please enter your full name', 'error');
+        document.getElementById('fullName').focus();
+        return false;
+    }
+    if (!rollNumber) {
+        showMessage('Please enter your roll number', 'error');
+        document.getElementById('rollNumber').focus();
+        return false;
+    }
+    if (!topic1) {
+        showMessage('Please enter at least one project topic', 'error');
+        document.getElementById('topic1').focus();
+        return false;
+    }
+    if (!approvedTopic) {
+        showMessage('Please select an approved topic', 'error');
+        document.getElementById('approvedTopic').focus();
+        return false;
+    }
+    if (!confirmation) {
+        showMessage('Please confirm that you have supervisor approval', 'error');
+        document.getElementById('confirmation').focus();
+        return false;
+    }
 
     return true;
 }
 
 // ============================================
-// SUBMIT FORM USING POST
+// SUBMIT FORM
 // ============================================
 async function submitForm(event) {
-    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
 
     if (!validateForm()) return false;
 
@@ -97,23 +120,35 @@ async function submitForm(event) {
     showMessage('⏳ Processing your submission...', 'info');
 
     try {
+        // Use a different fetch approach for Google Apps Script
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify(formData),
-            headers: { 'Content-Type': 'application/json' }
+            mode: 'cors',
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            redirect: 'follow',
+            body: JSON.stringify(formData)
         });
+
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const result = await response.json();
 
         if (result.success) {
-            showMessage('✅ Submission successful! Your project topics have been recorded.', 'success');
+            showMessage('✅ ' + result.message, 'success');
             resetForm();
         } else {
-            showMessage('❌ Submission failed: ' + result.message, 'error');
+            showMessage('❌ ' + result.message, 'error');
         }
 
     } catch (err) {
-        showMessage('❌ Submission error: ' + err.toString(), 'error');
+        console.error('Submission error:', err);
+        showMessage('❌ Submission failed. Please check your internet connection and try again. If the problem persists, contact your coordinator.', 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -127,7 +162,9 @@ async function submitForm(event) {
 // RESET FORM
 // ============================================
 function resetForm() {
-    ['fullName','rollNumber','topic1','topic2','topic3','topic4'].forEach(id => document.getElementById(id).value = '');
+    ['fullName', 'rollNumber', 'topic1', 'topic2', 'topic3', 'topic4'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
     document.getElementById('approvedTopic').value = '';
     document.getElementById('confirmation').checked = false;
     updateApprovedTopicDropdown();
@@ -138,15 +175,35 @@ function resetForm() {
 // SETUP EVENT LISTENERS
 // ============================================
 function setupEventListeners() {
-    ['topic1','topic2','topic3','topic4'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updateApprovedTopicDropdown);
+    // Update dropdown when topics change
+    ['topic1', 'topic2', 'topic3', 'topic4'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', updateApprovedTopicDropdown);
+        }
     });
 
-    document.getElementById('studentForm')?.addEventListener('submit', submitForm);
-    document.getElementById('submitBtn')?.addEventListener('click', submitForm);
+    // Form submit
+    const form = document.getElementById('studentForm');
+    if (form) {
+        form.addEventListener('submit', submitForm);
+    }
 
-    ['fullName','rollNumber','topic1'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', hideMessage);
+    // Submit button click
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitForm(e);
+        });
+    }
+
+    // Hide message when typing in required fields
+    ['fullName', 'rollNumber', 'topic1'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', hideMessage);
+        }
     });
 }
 
@@ -156,5 +213,9 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateApprovedTopicDropdown();
-    document.getElementById('fullName').focus();
+    
+    const fullNameInput = document.getElementById('fullName');
+    if (fullNameInput) {
+        fullNameInput.focus();
+    }
 });
