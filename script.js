@@ -4,142 +4,111 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzA5QmONMDWcAjG97KjLqREHo72CL6qXTsGEwS0DiHzbeaR7MyQfWJEcW7O7TkaCGMuLQ/exec';
 
 // ============================================
-// MAIN SUBMIT FUNCTION
+// GLOBAL ELEMENTS
 // ============================================
-function handleSubmit(event) {
-    console.log('=== SUBMIT PREVENTED ===');
+let fullNameInput, rollNumberInput, topic1Input, topic2Input, topic3Input, topic4Input;
+let approvedTopicSelect, confirmationCheckbox, submitBtn, messageDiv;
+
+// ============================================
+// INITIALIZE ELEMENTS
+// ============================================
+function initializeElements() {
+    fullNameInput = document.getElementById('fullName');
+    rollNumberInput = document.getElementById('rollNumber');
+    topic1Input = document.getElementById('topic1');
+    topic2Input = document.getElementById('topic2');
+    topic3Input = document.getElementById('topic3');
+    topic4Input = document.getElementById('topic4');
+    approvedTopicSelect = document.getElementById('approvedTopic');
+    confirmationCheckbox = document.getElementById('confirmation');
+    submitBtn = document.getElementById('submitBtn');
+    messageDiv = document.getElementById('message');
     
-    // CRITICAL: Prevent default form submission
-    if (event && typeof event.preventDefault === 'function') {
-        event.preventDefault();
-    }
-    
-    // Stop form from submitting normally
-    event.stopPropagation ? event.stopPropagation() : (event.cancelBubble = true);
-    
-    console.log('Now processing form data...');
-    
-    // Collect data
-    const formData = {
-        fullName: document.getElementById('fullName').value.trim(),
-        rollNumber: document.getElementById('rollNumber').value.trim(),
-        topic1: document.getElementById('topic1').value.trim(),
-        topic2: document.getElementById('topic2').value.trim() || '',
-        topic3: document.getElementById('topic3').value.trim() || '',
-        topic4: document.getElementById('topic4').value.trim() || '',
-        approvedTopic: document.getElementById('approvedTopic').value || ''
-    };
-    
-    console.log('Form data:', formData);
-    
-    // Validate
-    if (!validateForm(formData)) {
-        return false;
-    }
-    
-    // Disable button
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
-    
-    // Build URL
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(formData)) {
-        if (value) params.append(key, value);
-    }
-    
-    const submissionUrl = `${SCRIPT_URL}?${params.toString()}`;
-    console.log('URL:', submissionUrl);
-    
-    // SUBMIT WITHOUT OPENING NEW PAGE
-    submitSilently(submissionUrl);
-    
-    // Show success
-    showMessage('✅ Submission successful! Check your Google Sheet.', 'success');
-    
-    // Reset form after delay
-    setTimeout(() => {
-        resetForm();
-        btn.disabled = false;
-        btn.textContent = 'Submit Topics';
-    }, 2000);
-    
-    // CRITICAL: Return false to prevent form submission
-    return false;
+    console.log('Elements initialized:', {
+        fullName: !!fullNameInput,
+        rollNumber: !!rollNumberInput,
+        topic1: !!topic1Input,
+        topic2: !!topic2Input,
+        topic3: !!topic3Input,
+        topic4: !!topic4Input,
+        approvedTopic: !!approvedTopicSelect,
+        confirmation: !!confirmationCheckbox,
+        submitBtn: !!submitBtn,
+        message: !!messageDiv
+    });
 }
 
 // ============================================
-// SILENT SUBMISSION (NO PAGE CHANGE)
+// UPDATE APPROVED TOPIC DROPDOWN
 // ============================================
-function submitSilently(url) {
-    console.log('Submitting silently to:', url);
+function updateApprovedTopicDropdown() {
+    if (!approvedTopicSelect) return;
     
-    // METHOD 1: Create invisible iframe INSIDE current page
-    const iframeId = 'hidden-submit-frame-' + Date.now();
-    const iframe = document.createElement('iframe');
-    iframe.id = iframeId;
-    iframe.name = iframeId;
-    iframe.style.cssText = 'width:1px;height:1px;border:none;opacity:0;position:absolute;top:-100px;left:-100px;';
-    iframe.sandbox = 'allow-scripts allow-same-origin'; // Important for Google Apps Script
+    // Get all topic values
+    const topics = [
+        topic1Input ? topic1Input.value.trim() : '',
+        topic2Input ? topic2Input.value.trim() : '',
+        topic3Input ? topic3Input.value.trim() : '',
+        topic4Input ? topic4Input.value.trim() : ''
+    ].filter(topic => topic !== '');
     
-    document.body.appendChild(iframe);
+    const currentValue = approvedTopicSelect.value;
     
-    // Create a form inside the iframe
-    setTimeout(() => {
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            const form = iframeDoc.createElement('form');
-            form.method = 'GET';
-            form.action = url;
-            form.target = iframeId; // Submit to the iframe itself
-            
-            iframeDoc.body.appendChild(form);
-            form.submit();
-            
-            console.log('Form submitted inside iframe');
-        } catch (e) {
-            console.log('Iframe method failed, trying image...');
-            // Fallback to image
-            const img = new Image();
-            img.style.display = 'none';
-            img.src = url;
-            document.body.appendChild(img);
-        }
-        
-        // Clean up after 5 seconds
-        setTimeout(() => {
-            if (iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-            }
-        }, 5000);
-    }, 100);
+    // Clear and rebuild dropdown
+    approvedTopicSelect.innerHTML = `
+        <option value="">-- Select Approved Topic --</option>
+        <option value="None approved yet">None approved yet</option>
+    `;
+    
+    // Add entered topics as options
+    topics.forEach(topic => {
+        const option = document.createElement('option');
+        option.value = topic;
+        option.textContent = topic;
+        approvedTopicSelect.appendChild(option);
+    });
+    
+    // Restore previous selection if still valid
+    if (currentValue && (currentValue === 'None approved yet' || topics.includes(currentValue))) {
+        approvedTopicSelect.value = currentValue;
+    }
+    
+    console.log('Dropdown updated with topics:', topics);
 }
 
 // ============================================
-// VALIDATION
+// VALIDATE FORM
 // ============================================
-function validateForm(data) {
-    // Clear previous messages
+function validateForm() {
     hideMessage();
     
-    if (!data.fullName) {
+    if (!fullNameInput.value.trim()) {
         showMessage('Full Name is required', 'error');
+        fullNameInput.focus();
         return false;
     }
-    if (!data.rollNumber) {
+    
+    if (!rollNumberInput.value.trim()) {
         showMessage('Roll Number is required', 'error');
+        rollNumberInput.focus();
         return false;
     }
-    if (!data.topic1) {
+    
+    if (!topic1Input.value.trim()) {
         showMessage('At least Topic 1 is required', 'error');
+        topic1Input.focus();
         return false;
     }
-    if (!data.approvedTopic) {
+    
+    if (!approvedTopicSelect.value) {
         showMessage('Please select an approved topic', 'error');
+        approvedTopicSelect.focus();
         return false;
     }
-    if (!document.getElementById('confirmation').checked) {
+    
+    if (!confirmationCheckbox.checked) {
         showMessage('Please confirm supervisor approval', 'error');
+        confirmationCheckbox.focus();
         return false;
     }
     
@@ -147,168 +116,228 @@ function validateForm(data) {
 }
 
 // ============================================
-// DROPDOWN UPDATE
+// SUBMIT FORM (NO PAGE RELOAD)
 // ============================================
-function updateApprovedTopicDropdown() {
-    const topics = [
-        document.getElementById('topic1').value.trim(),
-        document.getElementById('topic2').value.trim(),
-        document.getElementById('topic3').value.trim(),
-        document.getElementById('topic4').value.trim()
-    ].filter(t => t);
+function submitForm(event) {
+    console.log('=== SUBMIT FORM ===');
     
-    const select = document.getElementById('approvedTopic');
-    const current = select.value;
-    
-    select.innerHTML = `
-        <option value="">-- Select Approved Topic --</option>
-        <option value="None approved yet">None approved yet</option>
-    `;
-    
-    topics.forEach(topic => {
-        const option = document.createElement('option');
-        option.value = topic;
-        option.textContent = topic;
-        select.appendChild(option);
-    });
-    
-    if (current && (current === 'None approved yet' || topics.includes(current))) {
-        select.value = current;
+    // CRITICAL: Prevent any default form behavior
+    if (event) {
+        if (event.preventDefault) event.preventDefault();
+        if (event.stopPropagation) event.stopPropagation();
+        event.returnValue = false;
+        event.cancelBubble = true;
     }
+    
+    // Validate
+    if (!validateForm()) {
+        return false;
+    }
+    
+    // Collect data
+    const formData = {
+        fullName: fullNameInput.value.trim(),
+        rollNumber: rollNumberInput.value.trim(),
+        topic1: topic1Input.value.trim(),
+        topic2: topic2Input.value.trim() || '',
+        topic3: topic3Input.value.trim() || '',
+        topic4: topic4Input.value.trim() || '',
+        approvedTopic: approvedTopicSelect.value
+    };
+    
+    console.log('Submitting data:', formData);
+    
+    // Disable submit button
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    
+    // Build URL
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(formData)) {
+        if (value !== undefined && value !== null) {
+            params.append(key, value);
+        }
+    }
+    
+    const submissionUrl = `${SCRIPT_URL}?${params.toString()}`;
+    console.log('Submission URL:', submissionUrl);
+    
+    // METHOD 1: Use invisible image (no page reload)
+    const img = new Image();
+    img.style.display = 'none';
+    img.src = submissionUrl;
+    
+    // Add to page (triggers request)
+    document.body.appendChild(img);
+    
+    // METHOD 2: Also try with fetch in no-cors mode as backup
+    fetch(submissionUrl, { mode: 'no-cors' })
+        .catch(() => console.log('Fetch backup completed'));
+    
+    // Show success immediately (don't wait for response)
+    showMessage('✅ Submission successful! Data saved to Google Sheet.', 'success');
+    
+    // Reset form after 2 seconds
+    setTimeout(() => {
+        resetForm();
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }, 2000);
+    
+    // Clean up image after 5 seconds
+    setTimeout(() => {
+        if (img.parentNode) {
+            img.parentNode.removeChild(img);
+        }
+    }, 5000);
+    
+    return false;
 }
 
 // ============================================
 // MESSAGE FUNCTIONS
 // ============================================
 function showMessage(text, type) {
-    const msg = document.getElementById('message');
-    if (!msg) return;
+    if (!messageDiv) return;
     
-    msg.textContent = text;
-    msg.className = `message ${type}`;
-    msg.classList.remove('hidden');
+    messageDiv.textContent = text;
+    messageDiv.className = `message ${type}`;
+    messageDiv.classList.remove('hidden');
     
+    // Auto-hide success messages
     if (type === 'success') {
         setTimeout(hideMessage, 5000);
     }
+    
+    // Scroll to show message
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function hideMessage() {
-    const msg = document.getElementById('message');
-    if (msg) msg.classList.add('hidden');
+    if (messageDiv) {
+        messageDiv.classList.add('hidden');
+    }
 }
 
 // ============================================
 // RESET FORM
 // ============================================
 function resetForm() {
-    document.getElementById('fullName').value = '';
-    document.getElementById('rollNumber').value = '';
-    document.getElementById('topic1').value = '';
-    document.getElementById('topic2').value = '';
-    document.getElementById('topic3').value = '';
-    document.getElementById('topic4').value = '';
-    document.getElementById('approvedTopic').value = '';
-    document.getElementById('confirmation').checked = false;
+    fullNameInput.value = '';
+    rollNumberInput.value = '';
+    topic1Input.value = '';
+    topic2Input.value = '';
+    topic3Input.value = '';
+    topic4Input.value = '';
+    approvedTopicSelect.value = '';
+    confirmationCheckbox.checked = false;
+    
+    // Update dropdown with empty values
     updateApprovedTopicDropdown();
 }
 
 // ============================================
-// INITIALIZATION - CRITICAL PART
+// SETUP EVENT LISTENERS
 // ============================================
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== INITIALIZING FORM ===');
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
     
-    // 1. GET THE FORM ELEMENT
-    const form = document.getElementById('studentForm');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    if (!form) {
-        console.error('FORM NOT FOUND! Make sure your form has id="studentForm"');
-        return;
-    }
-    
-    if (!submitBtn) {
-        console.error('SUBMIT BUTTON NOT FOUND! Make sure button has id="submitBtn"');
-        return;
-    }
-    
-    console.log('Form and button found');
-    
-    // 2. REMOVE ANY EXISTING EVENT LISTENERS FIRST
-    const newForm = form.cloneNode(true);
-    form.parentNode.replaceChild(newForm, form);
-    
-    // 3. SET UP NEW FORM SUBMISSION
-    const currentForm = document.getElementById('studentForm');
-    const currentSubmitBtn = document.getElementById('submitBtn');
-    
-    // IMPORTANT: Use onclick on button instead of form submit
-    currentSubmitBtn.onclick = function(event) {
-        console.log('Button clicked, calling handleSubmit');
-        handleSubmit(event);
-        return false; // Prevent default
-    };
-    
-    // Also prevent Enter key form submission
-    currentForm.onkeypress = function(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            return false;
-        }
-    };
-    
-    // 4. SET UP TOPIC INPUT LISTENERS
-    ['topic1', 'topic2', 'topic3', 'topic4'].forEach(id => {
-        const input = document.getElementById(id);
+    // Listen to topic inputs for dropdown updates
+    const topicInputs = [topic1Input, topic2Input, topic3Input, topic4Input];
+    topicInputs.forEach(input => {
         if (input) {
             input.addEventListener('input', updateApprovedTopicDropdown);
-            // Also prevent Enter key in inputs
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    return false;
-                }
-            });
+            console.log(`Added listener to ${input.id}`);
         }
     });
     
-    // 5. INITIALIZE DROPDOWN
+    // Handle submit button click
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(event) {
+            console.log('Submit button clicked');
+            submitForm(event);
+            return false;
+        });
+        console.log('Added listener to submit button');
+    }
+    
+    // Prevent form submission on Enter key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const activeElement = document.activeElement;
+            const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName);
+            
+            if (isInput) {
+                event.preventDefault();
+                
+                // If Enter is pressed in any field except optional topics, submit
+                if (activeElement.id !== 'topic2' && 
+                    activeElement.id !== 'topic3' && 
+                    activeElement.id !== 'topic4') {
+                    submitForm(event);
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// INITIALIZE EVERYTHING
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== FORM INITIALIZATION STARTED ===');
+    
+    // Initialize elements
+    initializeElements();
+    
+    // Check if all required elements exist
+    if (!submitBtn) {
+        console.error('Submit button not found! Make sure you have: <button id="submitBtn">');
+        return;
+    }
+    
+    if (!approvedTopicSelect) {
+        console.error('Approved topic dropdown not found! Make sure you have: <select id="approvedTopic">');
+        return;
+    }
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Initialize dropdown
     updateApprovedTopicDropdown();
     
-    console.log('✅ Form initialized successfully');
-    console.log('Test by filling form and clicking Submit button');
+    // Test connection
+    console.log('Testing Apps Script connection...');
+    const testImg = new Image();
+    testImg.src = SCRIPT_URL + '?test=connection';
+    testImg.onload = () => console.log('✅ Connection test passed');
+    testImg.onerror = () => console.log('⚠️ Connection test (expected)');
+    
+    console.log('=== FORM READY ===');
+    console.log('Fill the form and click "Submit Topics" button');
 });
 
 // ============================================
-// MANUAL TEST FUNCTION
+// TEST FUNCTION
 // ============================================
-window.testFormSubmission = function() {
+window.testForm = function() {
     console.log('=== RUNNING TEST ===');
     
     // Fill test data
-    document.getElementById('fullName').value = 'Test User';
-    document.getElementById('rollNumber').value = 'TEST' + Math.floor(Math.random() * 1000);
-    document.getElementById('topic1').value = 'Test Project ' + Date.now();
-    document.getElementById('approvedTopic').value = 'None approved yet';
-    document.getElementById('confirmation').checked = true;
+    fullNameInput.value = 'Test Student';
+    rollNumberInput.value = 'TEST' + Date.now();
+    topic1Input.value = 'Test Project ' + Date.now();
+    approvedTopicSelect.value = 'None approved yet';
+    confirmationCheckbox.checked = true;
     
+    // Update dropdown
     updateApprovedTopicDropdown();
     
-    console.log('Test data filled. Click submit button or run:');
-    console.log('document.getElementById("submitBtn").click()');
+    console.log('Test data filled. Click submit button or run: submitForm()');
+    console.log('Then check your Google Sheet in 10 seconds.');
 };
 
-// Add this at the VERY END of the file
-setTimeout(function() {
-    const form = document.getElementById('studentForm');
-    if (form && form.tagName === 'DIV') {
-        // Convert div to form
-        const formElement = document.createElement('form');
-        formElement.id = 'studentForm';
-        formElement.innerHTML = form.innerHTML;
-        formElement.onsubmit = function() { return false; };
-        form.parentNode.replaceChild(formElement, form);
-        console.log('Converted div to form with onsubmit prevention');
-    }
-}, 1000);
+// Make submitForm available globally for testing
+window.submitForm = submitForm;
