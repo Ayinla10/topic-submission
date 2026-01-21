@@ -51,16 +51,6 @@ function updateApprovedTopicDropdown() {
     }
 }
 
-// Listen for changes on all topic inputs
-[topic1Input, topic2Input, topic3Input, topic4Input].forEach(input => {
-    if (input) {
-        input.addEventListener('input', updateApprovedTopicDropdown);
-    }
-});
-
-// Initialize dropdown
-document.addEventListener('DOMContentLoaded', updateApprovedTopicDropdown);
-
 // ============================================
 // MESSAGE DISPLAY
 // ============================================
@@ -168,7 +158,7 @@ async function submitForm() {
         console.log('Trying direct fetch...');
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'cors', // Try with CORS
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -186,13 +176,15 @@ async function submitForm() {
             showMessage(result.message || 'Submission failed. Please try again.', 'error');
         }
         
-        return; // Success, exit function
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Topics';
+        return;
         
     } catch (error) {
         console.log('Direct fetch failed, trying CORS workaround...', error);
     }
 
-    // METHOD 2: CORS Workaround using Google Forms style
+    // METHOD 2: Google Forms style submission (GET with parameters)
     try {
         console.log('Trying Google Forms style submission...');
         
@@ -208,7 +200,7 @@ async function submitForm() {
         // Use GET with parameters (Google Forms style)
         const response = await fetch(`${SCRIPT_URL}?${params.toString()}`, {
             method: 'GET',
-            mode: 'no-cors' // Don't expect response
+            mode: 'no-cors'
         });
         
         console.log('Google Forms style submission sent');
@@ -216,15 +208,15 @@ async function submitForm() {
         resetForm();
         
     } catch (error) {
-        console.log('Google Forms style failed, trying JSONP...', error);
+        console.log('Google Forms style failed, trying alternative method...', error);
         
-        // METHOD 3: JSONP Workaround
+        // METHOD 3: Form submission workaround
         try {
-            await submitWithJSONP(formData);
-            showMessage('Submission sent successfully!', 'success');
+            submitWithFormWorkaround(formData);
+            showMessage('Submission sent! If you see a new tab, close it and continue.', 'success');
             resetForm();
-        } catch (jsonpError) {
-            console.error('All methods failed:', jsonpError);
+        } catch (workaroundError) {
+            console.error('All methods failed:', workaroundError);
             
             // METHOD 4: Show data for manual entry
             showManualEntryMessage(formData);
@@ -235,49 +227,41 @@ async function submitForm() {
     }
 }
 
-// JSONP Workaround function
-function submitWithJSONP(data) {
-    return new Promise((resolve, reject) => {
-        // Create callback function
-        const callbackName = 'jsonp_callback_' + Date.now();
-        window[callbackName] = function(response) {
-            delete window[callbackName];
-            document.body.removeChild(script);
-            
-            if (response && response.success) {
-                resolve(response);
-            } else {
-                reject(new Error('JSONP submission failed'));
-            }
-        };
-        
-        // Build URL with callback
-        const params = new URLSearchParams();
-        for (const [key, value] of Object.entries(data)) {
-            params.append(key, value);
+// Form submission workaround (opens new tab/window)
+function submitWithFormWorkaround(data) {
+    // Create a form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = SCRIPT_URL;
+    form.target = '_blank'; // Open in new tab
+    form.style.display = 'none';
+    
+    // Add all data as hidden inputs
+    for (const [key, value] of Object.entries(data)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+    
+    // Add timestamp
+    const timestampInput = document.createElement('input');
+    timestampInput.type = 'hidden';
+    timestampInput.name = 'timestamp';
+    timestampInput.value = new Date().toISOString();
+    form.appendChild(timestampInput);
+    
+    // Add to page and submit
+    document.body.appendChild(form);
+    form.submit();
+    
+    // Remove form after submission
+    setTimeout(() => {
+        if (document.body.contains(form)) {
+            document.body.removeChild(form);
         }
-        params.append('callback', callbackName);
-        
-        // Create script tag
-        const script = document.createElement('script');
-        script.src = `${SCRIPT_URL}?${params.toString()}`;
-        script.onerror = () => {
-            delete window[callbackName];
-            document.body.removeChild(script);
-            reject(new Error('Script load failed'));
-        };
-        
-        document.body.appendChild(script);
-        
-        // Timeout after 10 seconds
-        setTimeout(() => {
-            if (window[callbackName]) {
-                delete window[callbackName];
-                document.body.removeChild(script);
-                reject(new Error('JSONP timeout'));
-            }
-        }, 10000);
-    });
+    }, 3000);
 }
 
 // Show manual entry option
@@ -330,6 +314,13 @@ if (submitBtn) {
     submitBtn.addEventListener('click', submitForm);
 }
 
+// Listen for changes on all topic inputs to update dropdown
+[topic1Input, topic2Input, topic3Input, topic4Input].forEach(input => {
+    if (input) {
+        input.addEventListener('input', updateApprovedTopicDropdown);
+    }
+});
+
 // Allow Enter key to submit
 document.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
@@ -352,26 +343,23 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Student form loaded');
     console.log('Script URL:', SCRIPT_URL);
     
-    // Test connection
+    // Initialize the dropdown
+    updateApprovedTopicDropdown();
+    
+    // Test connection (optional)
     testConnection();
 });
 
-// Test connection to Apps Script
+// Test connection to Apps Script (optional)
 async function testConnection() {
     try {
         console.log('Testing connection to Apps Script...');
         
         // Try GET request
         const response = await fetch(`${SCRIPT_URL}?action=getData`);
-        const text = await response.text();
-        console.log('Connection test response:', text);
-        
-        // Try to parse as JSON
-        try {
-            const data = JSON.parse(text);
-            console.log('Connection successful!', data);
-        } catch (e) {
-            console.log('Response is not JSON, but connection works');
+        if (response.ok) {
+            const text = await response.text();
+            console.log('Connection test response:', text);
         }
     } catch (error) {
         console.warn('Connection test failed (expected for CORS):', error.message);
